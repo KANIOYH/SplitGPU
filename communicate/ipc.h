@@ -2,19 +2,23 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-30 16:59:18
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2023-12-30 19:54:14
+ * @LastEditTime: 2024-01-01 22:58:55
  * @FilePath: /SplitGPU/include/ipc.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 #pragma once
 #include "split_gpu.h"
-//#include "tcp.h"
 extern "C" {
     #include "shmem.h"
 }
-
 #include <mutex>
+
 namespace SplitGPU {
+
+enum Ipc_type {
+    SHARE_MEMORY,
+    TCP,
+};
 
 enum Request_state {
     REQ_FREE,
@@ -43,25 +47,26 @@ struct request {
 
 class Ipc_server {
 public:
-    Ipc_server();
-    virtual void start();
-    virtual void close();
-    virtual request* poll_requests();
+    virtual ~Ipc_server() = default;
+    virtual void start() = 0;
+    virtual void close() = 0;
+    virtual request* poll_requests() = 0;
 };
 
 class Ipc_client {
 public:
-    virtual RET connect();
-    virtual void close();
-    virtual request* send_request(Request_type type,void* dptr,size_t size);
-    virtual RET wait_request(request* req);
+    virtual ~Ipc_client() = default;
+    virtual RET connect() = 0;
+    virtual void close() = 0;
+    virtual request* send_request(Request_type type,void* dptr,size_t size) = 0;
+    virtual RET wait_request(request* req) = 0;
 };
 
 /*----------shmem ipc----------*/
 class Shm_server : public Ipc_server {
 public:
     Shm_server();
-    ~Shm_server();
+    ~Shm_server() override;
     void start() override;
     void close() override;
     request* poll_requests() override;

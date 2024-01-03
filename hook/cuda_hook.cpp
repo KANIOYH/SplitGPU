@@ -2,8 +2,8 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2023-12-29 17:16:27
- * @FilePath: /SplitGPU/manager/schedule.cpp
+ * @LastEditTime: 2024-01-02 11:32:35
+ * @FilePath: /SplitGPU/hook/cuda_hook.cpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 #include <stdio.h>
@@ -13,6 +13,13 @@
 
 #include "hook/hook.h"
 #include "hook/macro_common.h"
+#include "split_gpu.h"
+#include "client.h"
+#include "ipc.h"
+
+using namespace SplitGPU;
+
+Client client(SHARE_MEMORY);
 
 cudaError_t cudaLaunchKernel (const void *func, dim3 gridDim, dim3 blockDim, void **args,
                                                          size_t sharedMem, cudaStream_t stream) {
@@ -23,6 +30,7 @@ cudaError_t cudaLaunchKernel (const void *func, dim3 gridDim, dim3 blockDim, voi
         (cudaError_t (*) (const void *func, dim3 gridDim, dim3 blockDim, void **args,
                                                          size_t sharedMem, cudaStream_t stream))
             dlsym(RTLD_NEXT, "cudaLaunchKernel");
+    CHECK_RET(client.request(SplitGPU::REQ_TYPE_LAUNCH,nullptr,0));
     return lcudaLaunchKernel(func, gridDim, blockDim, args, sharedMem, stream);
 }
 
@@ -75,6 +83,7 @@ HOOK_C_API HOOK_DECL_EXPORT void __cudaRegisterManagedVar(void **fatCubinHandle,
 
 HOOK_C_API HOOK_DECL_EXPORT char __cudaInitModule(void **fatCubinHandle) {
     //HOOK_TRACE_PROFILE("__cudaInitModule");
+    client.connect();
     using func_ptr = char (*)(void **);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("__cudaInitModule"));
     HOOK_CHECK(func_entry);
@@ -105,6 +114,7 @@ HOOK_C_API HOOK_DECL_EXPORT void __cudaRegisterFunction(void **fatCubinHandle, c
                                                         const char *deviceName, int thread_limit, uint3 *tid,
                                                         uint3 *bid, dim3 *bDim, dim3 *gDim, int *wSize) {
     //HOOK_TRACE_PROFILE("__cudaRegisterFunction");
+    client.connect();
     using func_ptr =
         void (*)(void **, const char *, char *, const char *, int, uint3 *, uint3 *, dim3 *, dim3 *, int *);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("__cudaRegisterFunction"));

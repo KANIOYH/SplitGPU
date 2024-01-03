@@ -2,7 +2,7 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:13
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2023-12-30 17:28:30
+ * @LastEditTime: 2024-01-02 12:06:00
  * @FilePath: /SplitGPU/manager/user_context.cpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -11,9 +11,14 @@
 
 namespace SplitGPU {
 
-    Ucontext::Ucontext(size_t size):memory_limit(size) {}
+    Ucontext::Ucontext(Client_id client_id,int client_weight, size_t size)
+    :id(client_id), weight(client_weight), memory_limit(size) {}
 
     Ucontext::~Ucontext(){}
+
+    int Ucontext::get_weight() {
+        return weight;
+    }
 
     size_t Ucontext::get_memory_limit() {
         return memory_limit;
