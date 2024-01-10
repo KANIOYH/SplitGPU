@@ -1,5 +1,7 @@
 build
 thirdParty
+log/user
+output
 .cache
 .vscode
 *.o

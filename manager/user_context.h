@@ -2,14 +2,16 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:19:02
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-02 12:05:35
+ * @LastEditTime: 2024-01-04 11:46:10
  * @FilePath: /SplitGPU/include/user_context.h
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @Description: 
  */
 #pragma once
 #include <cstddef>
 #include <map>
-
+#include <fstream>  
+#include <iostream>  
+#include <memory>
 namespace SplitGPU {
 
 typedef int Client_id;
@@ -28,13 +30,18 @@ public:
     size_t get_memory_limit();
     size_t get_alloced_memory();
     void add_memory(size_t size, void* dptr);
-    void remove_memory(void* dptr);
+    size_t remove_memory(void* dptr);
+    void login_out(bool in);
+    void log_launch();
 private:
     Client_id id;
+    size_t launch;
     int    weight;
     size_t memory_limit;
     size_t alloced_memory;
+    std::shared_ptr<std::ofstream> log;
     std::map<void*, GPUMemory> memory_map;
+    
 };
 }
 

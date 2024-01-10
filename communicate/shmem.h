@@ -2,8 +2,8 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-09-27 09:39:17
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2023-12-30 19:53:02
- * @FilePath: /sg/include/shmem.h
+ * @LastEditTime: 2024-01-04 11:19:39
+ * @FilePath: /SplitGPU/communicate/shmem.h
  * @Description: 
  * 
  */
@@ -18,7 +18,7 @@
 #include <sys/shm.h>
 
 
-#define SHM_SIZE 2048 
+#define SHM_SIZE 204800
 
 struct excuda_shmem_t {
     int shmid;

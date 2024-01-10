@@ -14,6 +14,7 @@ int main() {
     new SplitGPU::Controller(
     SplitGPU::SHARE_MEMORY,
     SplitGPU::TIME_SLICE_SCHEDULE);
+    ctlr->load_clients();
     ctlr->start();
     return 0;
 }

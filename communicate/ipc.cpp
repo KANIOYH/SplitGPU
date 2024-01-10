@@ -2,7 +2,7 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:03:17
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-02 17:07:26
+ * @LastEditTime: 2024-01-06 22:25:51
  * @FilePath: /SplitGPU/communicate/ipc.cpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -23,7 +23,7 @@ Shm_server::Shm_server()  {
     slot_number = req_number;
     SG_LOG("init Shm_server,request number:%d", req_number);
     for(int i=0;i<slot_number;i++) {
-        requests[i].state = REQ_FREE;
+        requests[i].state = REQUEST_FREE;
     }
 }
 
@@ -39,7 +39,7 @@ request* Shm_server::poll_requests() {
     int idx = 0;
     for(int i=0;i<slot_number;i++) {
         idx = (i + poll_idx) % slot_number;
-        if(requests[idx].state == REQ_READY) {
+        if(requests[idx].state == REQUEST_READY) {
             poll_idx = idx;
             return &(requests[idx]);
         }
@@ -47,8 +47,22 @@ request* Shm_server::poll_requests() {
     return nullptr;
 }
 
+void Shm_server::close_client(Client_id id) {
+    for(int i=0;i<slot_number;i++) {
+        if(requests[i].user == id && requests[i].state != REQUEST_FREE) {
+            requests[i].state = REQUEST_FREE;
+            try {
+                requests[i].mutex.unlock();
+            }
+            catch(...) {}
+        }
+    }
+}
+
 
 Shm_client::Shm_client():user(getpid()) {}
+
+Shm_client::Shm_client(int user):user(user) {}
 
 Shm_client::~Shm_client() {
     //sg_free_shmem(&shm);
@@ -69,13 +83,13 @@ void Shm_client::close() {}
 request* Shm_client::send_request(Request_type type,void* dptr,size_t size){
     int idx = 0;
     for(int i=0;i<slot_number;i++) {
-        if(requests[i].state == REQ_FREE) {
+        if(requests[i].state == REQUEST_FREE) {
             if(requests[i].mutex.try_lock()) {
                 requests[i].user  = user;
                 requests[i].dptr  = dptr;
                 requests[i].size  = size;
                 requests[i].type  = type;
-                requests[i].state = REQ_READY;
+                requests[i].state = REQUEST_READY;
                 return &requests[i];
             }
         }
@@ -85,20 +99,24 @@ request* Shm_client::send_request(Request_type type,void* dptr,size_t size){
 
 RET Shm_client::wait_request(request* req) {
     while (true) {
-        if(req->state == REQ_SUCC || req->state == REQ_FAIL)
+        if(req->state == REQUEST_SUCC 
+        || req->state == REQUEST_FAIL 
+        || req->state == REQUEST_ERR
+        || req->state == REQUEST_FREE)
             break;
-        usleep(1000);
         // SG_DEBUG("wait req,state:%d",req->state );
     }
     RET ret;
-    if(req->state == REQ_SUCC)
+    if(req->state == REQUEST_SUCC)
         ret = RET_OK;
-    else if(req->state == REQ_FAIL)
+    else if(req->state == REQUEST_FAIL)
         ret = RET_FAIL;
     else
         ret = RET_ERR;
-    req->state = REQ_FREE;
+    if(req->state == REQUEST_FREE && this->user == req->user)
+        return ret;
     req->mutex.unlock();
+    req->state = REQUEST_FREE;
     return ret;
 }
 

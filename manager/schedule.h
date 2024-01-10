@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:18:53
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-02 17:10:21
+ * @LastEditTime: 2024-01-04 13:27:14
  * @FilePath: /SplitGPU/include/schedule.h
  * @Description: 
  * 
@@ -27,6 +27,8 @@ enum Schedule_type {
 };
 
 typedef std::pair<Client_id, int> Client_weight;
+
+
 
 class Schedule {
 public:
@@ -55,7 +57,7 @@ public:
         }
 private:
     const int max_clock = 100;
-    const size_t time_slice_unit = 10000;
+    size_t time_slice_unit;
     std::atomic<int> time_clock;
     std::list<Client_weight> client_time_list;
     std::map<Client_id, Client_weight&> client_time_table;

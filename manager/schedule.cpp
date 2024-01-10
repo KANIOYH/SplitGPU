@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-02 22:58:59
+ * @LastEditTime: 2024-01-04 13:08:28
  * @FilePath: /SplitGPU/manager/schedule.cpp
  * @Description: 
  * 
@@ -13,13 +13,17 @@
 #include "user_context.h"
 #include <unistd.h>
 #include <utility>
+#include <openssl/rand.h>  
+#include <chrono>  
+#include <thread> 
+#include <iostream>
+#include <fstream>
 namespace SplitGPU {
 
-Time_schedule::Time_schedule() {}
+Time_schedule::Time_schedule():time_slice_unit(TIME_SLICE_UNIT) {}
 Time_schedule::~Time_schedule() {
 
 }
-
 RET Time_schedule::push_user(Client_id id, int weight) {
     int sum_weight = client_time_list.back().second + weight;
     if(sum_weight > max_wegiht) {
@@ -63,7 +67,6 @@ RET Time_schedule::check(Client_id id, int weight) {
         Client_weight &item = client_time_table.at(id);
         int sum_weight = item.second;
         int now_clock = query();
-        //SG_LOG("weight:%d,(%d,%d),clock:%d", weight,sum_weight - weight,sum_weight,now_clock);
         // if(weights > 0)
         //     now_clock %= weights;
         if( (sum_weight - weight) <= now_clock  && now_clock < sum_weight) {
@@ -86,13 +89,17 @@ void Time_schedule::start() {
             temp++;
             temp %= max_clock;
             time_clock.store(temp);
-            usleep(time_slice_unit);
+            std::this_thread::sleep_for(std::chrono::microseconds(time_slice_unit));
+            //usleep(time_slice_unit);
         }
     });
 }
 
 int Time_schedule::query() {
     int now_clock = time_clock.load();
+    // unsigned char* rand_value;
+    // RAND_bytes(rand_value, sizeof(int));
+    // now_clock = *((unsigned*)rand_value)%100;
     return now_clock;
 }
 
