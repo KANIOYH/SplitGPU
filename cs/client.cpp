@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:25
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-10 13:31:22
+ * @LastEditTime: 2024-01-12 09:01:04
  * @FilePath: /SplitGPU/cs/client.cpp
  * @Description: 
  * 
@@ -78,6 +78,15 @@ RET Client::request(Request_type type,void* dptr,size_t size) {
 
     }
     return ret;
+}
+
+std::string Client::get_kernel_mangling_name(const void* host_fun) {
+    auto it = func_name_table.find(host_fun);
+    if(it != func_name_table.end()) {
+        return it->second;
+    } else {
+        return nullptr;
+    }
 }
 
 }

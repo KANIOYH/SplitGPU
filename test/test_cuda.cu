@@ -36,7 +36,10 @@ void test_parallel_add(void* dptr,int add,size_t n) {
     dim3 grid((n + block.x -1)/block.x);
     //dim3 grid((n)/block.x);
     cudaDeviceSynchronize();
+    
     parallel_add_val<<<grid,block>>>(dptr,add,n);
+    auto func = parallel_add_val;
+    printf("func addr:%p\n",(void*)(*func));
     cudaDeviceSynchronize();
     //printf("Yes add-kernel finsh!\n");
     void* host_ptr = malloc(n);
@@ -62,7 +65,7 @@ int main() {
     size_t size = 1<<20;
     cudaMalloc(&dptr,size);
     getchar();
-    for(int i=0;i<10;i++) {
+    for(int i=0;i<1;i++) {
         test_parallel_add(dptr,1, size);
         usleep(1000);
     }

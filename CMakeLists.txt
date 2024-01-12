@@ -17,7 +17,7 @@ target_include_directories(Split_GPU_Application PUBLIC "./include/" "/usr/local
 target_link_libraries(Split_GPU_Application PUBLIC -pthread -lssl -lcrypto)
 
 add_library(sgcudart SHARED 
-            hook/cuda_hook.cpp
+            hook/cudart_hook.cpp
             cs/client.cpp
             communicate/ipc.cpp
             communicate/shmem.c)
@@ -31,6 +31,10 @@ add_custom_command(
 add_executable(test_cuda test/test_cuda.cu)
 target_include_directories(test_cuda PUBLIC "/usr/local/cuda/include/")
 target_link_libraries(test_cuda PUBLIC -lcuda -lcudart)
+
+add_executable(remote_cuda test/remote_cuda.cu)
+target_include_directories(remote_cuda PUBLIC "/usr/local/cuda/include/")
+target_link_libraries(remote_cuda PUBLIC -lcuda)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

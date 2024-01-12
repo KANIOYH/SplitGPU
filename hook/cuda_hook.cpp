@@ -2,7 +2,7 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-04 18:59:04
+ * @LastEditTime: 2024-01-12 10:05:50
  * @FilePath: /SplitGPU/hook/cuda_hook.cpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -36,6 +36,18 @@ void signal_handler(int signum) {
 
 void signal_reg() {
     if(init) {
+        cuInit(0);
+        CUdevice device;
+        CUcontext* context;
+        cuDeviceGet(&device, 0);
+        cudaSetDevice(0);
+        auto res = cuCtxGetCurrent(context);
+        if (res != CUDA_SUCCESS){
+            printf("cuCtxGetCurrent fail\n");
+            exit(EXIT_FAILURE);
+        } else {
+            printf("cuCtxGetCurrent succ\n");
+        }
         init = false;
         if (signal(SIGINT, signal_handler) == SIG_ERR) {
             perror("Failed to register signal handler");
@@ -91,9 +103,17 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMalloc(void **devPtr, size_t size) {
         /*exceed*/
         ret = cudaErrorMemoryAllocation;
     } else {
-        ret = func_entry(devPtr, size);
+        //ret = func_entry(devPtr, size);
+        auto res = cuMemAlloc((CUdeviceptr*)devPtr,size);
+        if (res != CUDA_SUCCESS){
+            printf("cuMemAlloc fail\n");
+            exit(EXIT_FAILURE);
+        } else {
+            printf("cuMemAlloc succ\n");
+        }
         CHECK_RET(client.request(SplitGPU::REQ_TYPE_ALLOC,*devPtr,size));
     }
+    cuMemAlloc((CUdeviceptr*)devPtr,size);
     return ret;
 }
 
