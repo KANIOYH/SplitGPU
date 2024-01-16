@@ -46,7 +46,7 @@ int main() {
     cuMemcpyHtoD(d_B, h_B, size);
 
     CUmodule module;
-    res = cuModuleLoad(&module, "/home/chenyuanhui/project/cuda_hook/data.fatbin");
+    res = cuModuleLoad(&module, "/home/chenyuanhui/project/cuda_hook/sample/cuda/vector_add.fatbin");
     if (res != CUDA_SUCCESS){
         printf("cuModuleLoad\n");
         exit(EXIT_FAILURE);
@@ -69,7 +69,7 @@ int main() {
     int blocksPerGrid =
             (N + threadsPerBlock - 1) / threadsPerBlock;
 
-    void* args[] = { &d_A, &d_B, &d_C, &N };
+    void* args[] = { &d_A, &d_B, &d_C, &N ,&threadsPerBlock};
     cuLaunchKernel(vecAdd,
                    blocksPerGrid, 1, 1, threadsPerBlock, 1, 1,
                    0, 0, args, 0);
@@ -81,6 +81,6 @@ int main() {
             exit(-1);
         }
     }
-    printf("a check pass!\n");
+    printf("aaa check pass!\n");
     return 0;
 }

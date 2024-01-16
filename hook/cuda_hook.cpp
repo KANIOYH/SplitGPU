@@ -2,7 +2,7 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-12 10:05:50
+ * @LastEditTime: 2024-01-13 14:56:47
  * @FilePath: /SplitGPU/hook/cuda_hook.cpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -93,6 +93,7 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMallocManaged(void **devPtr, size_t 
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMalloc(void **devPtr, size_t size) {
     signal_reg();
+    printf("aaa\n");
     //HOOK_TRACE_PROFILE("cudaMalloc");
     using func_ptr = cudaError_t (*)(void **, size_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaMalloc"));

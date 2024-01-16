@@ -51,24 +51,27 @@ void test_parallel_add(void* dptr,int add,size_t n) {
             exit(-1);
         }
     }
+    printf("%p %p %p\n",&dptr,nullptr,&n);
+    printf("%ld %ld\n",sizeof(dptr),sizeof(n));
     parallel_add_val<<<grid,block>>>(dptr,-1*add,n);
     printf("check pass!\n");
 }
 
 int main() {
 
-    auto ret = cuInit(0);
-    printf("init ret:%d\n",ret);
-    CUdeviceptr cudptr;
-    cuMemAlloc(&cudptr,1024);
+    // auto ret = cuInit(0);
+    // printf("init ret:%d\n",ret);
+    // CUdeviceptr cudptr;
+    // cuMemAlloc(&cudptr,1024);
     void* dptr;
-    size_t size = 1<<20;
-    cudaMalloc(&dptr,size);
-    getchar();
-    for(int i=0;i<1;i++) {
-        test_parallel_add(dptr,1, size);
-        usleep(1000);
-    }
+    size_t size = 1024;
+    auto res = cudaMalloc(&dptr,size);
+    printf("%d\n",res);
+    // getchar();
+    // for(int i=0;i<1;i++) {
+    //     test_parallel_add(dptr,1, size);
+    //     usleep(1000);
+    // }
     
     return 0;
 }

@@ -4,8 +4,11 @@
 //
 // Description: auto generate 297 apis
 
+#include <cstddef>
+#include <cstring>
 #include <fatbinary_section.h>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
 #include "cudart_subset.h"
@@ -13,6 +16,10 @@
 #include "macro_common.h"
 #include "trace_profile.h"
 
+#include "tcp_server_client.h"
+#include "cuda_param.h"
+
+static SplitGPU::Tcp_client cli("127.0.0.1","8888");
 char* data_start;
 
 struct fatBinaryHeader        
@@ -714,6 +721,7 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchKernel(const void *func, dim3 
     using func_ptr = cudaError_t (*)(const void *, dim3, dim3, void **, size_t, cudaStream_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaLaunchKernel"));
     HOOK_CHECK(func_entry);
+    printf("%phook %p %p %p:%ld\n",args,args[0],args[1],args[2],*((size_t*)args[2]));
     return func_entry(func, gridDim, blockDim, args, sharedMem, stream);
 }
 
@@ -833,12 +841,32 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMallocManaged(void **devPtr, size_t 
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMalloc(void **devPtr, size_t size) {
-    printf("use cudaMalloc\n");
     HOOK_TRACE_PROFILE("cudaMalloc");
-    using func_ptr = cudaError_t (*)(void **, size_t);
-    static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaMalloc"));
-    HOOK_CHECK(func_entry);
-    return func_entry(devPtr, size);
+    SplitGPU::gpu_request req = {
+            .type = CUDA_REQ_TYPE,
+            .func_name = "cudaMalloc",
+    };
+    off_t offset = 0;
+    void* ptr;
+    size_t _size;
+    PACK_PARAM(req.fargs,offset,ptr)
+    PACK_PARAM(req.fargs,offset,size)
+    cli.sock_write((char*)&req,sizeof(req));
+    cli.sock_read((char*)&req,sizeof(req));
+    memcpy(&ptr,&req.fargs[0],sizeof(devPtr));
+    *devPtr = ptr;
+    cudaError_t res;
+    memcpy(&res,&req.fargs[offset],sizeof(cudaError_t));
+    if(res != cudaSuccess) {
+        printf("fail res %d\n",res);
+    } else {
+        printf("cudasucc %p %ld\n",*devPtr, size);
+    }
+    return res;
+    // using func_ptr = cudaError_t (*)(void **, size_t);
+    // static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaMalloc"));
+    // HOOK_CHECK(func_entry);
+    // return func_entry(devPtr, size);
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMallocHost(void **ptr, size_t size) {
@@ -2635,10 +2663,9 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaStreamUpdateCaptureDependencies_ptsz
 
 HOOK_C_API HOOK_DECL_EXPORT void **__cudaRegisterFatBinary(void *fatCubin) {
     HOOK_TRACE_PROFILE("__cudaRegisterFatBinary");
-    printf("fat %ld %ld\n",sizeof(fatBinaryHeader),sizeof(const unsigned long long));
+    cli.sock_connect();
     __fatBinC_Wrapper_t* fbw = (__fatBinC_Wrapper_t*)fatCubin;
     fatBinaryHeader* header = (fatBinaryHeader*)fbw->data;
-    printf("size %lld,start:%p\n",header->fatSize,(void*)header);
     data_start = (char*)header;
     FILE *file = fopen("./data.fatbin", "wb");
     if (file == NULL) {
@@ -2647,19 +2674,6 @@ HOOK_C_API HOOK_DECL_EXPORT void **__cudaRegisterFatBinary(void *fatCubin) {
     size_t bytesWritten = fwrite((void*)fbw->data, sizeof(char), header->fatSize+16, file); // 将数据写入文件
     
     fclose(file); // 关闭文件
-    printf("成功将数据以二进制形式写入文件\n");
-    // char* header = (char*)fbw->data;
-    // for(int i=0;i<32;i++) {
-    //     if(i%4==0)
-    //         printf("\n");
-    //     unsigned char v = header[i];
-    //     printf("%02x ",v);
-    // }
-    // printf("\n");
-    // if(FATBINC_MAGIC==header->magic)
-    //     printf("magic match!! size:%d %lld\n",header->headerSize,header->fatSize);
-    // else
-    //     printf("magic fail match.....\n");
     using func_ptr = void **(*)(void *);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("__cudaRegisterFatBinary"));
     HOOK_CHECK(func_entry);
@@ -2747,15 +2761,7 @@ HOOK_C_API HOOK_DECL_EXPORT void __cudaRegisterFunction(void **fatCubinHandle, c
     // }
     // else
     //     printf("cudaGetSymbolAddress succ\n");
-    printf("host func\n");
     unsigned char* header = (unsigned char*)hostFun;
-    for(int i=0;i<32;i++) {
-        if(i%4==0)
-            printf("\n");
-        unsigned char v = header[i];
-        printf("%02x ",v);
-    }
-    printf("dev func\n");
     header = (unsigned char*)deviceFun;
     std::vector<char> func_vector;
     for(int i=0;i<128;i++) {
