@@ -20,8 +20,7 @@ add_library(sgcudart SHARED
             hook/cudart_hook.cpp
             cs/client.cpp
             communicate/ipc.cpp
-            communicate/shmem.c
-            communicate/tcp_server_client.cpp)
+            communicate/shmem.c)
 target_include_directories(sgcudart PUBLIC "./include/" "/usr/local/cuda/include/")
 add_custom_command(  
   TARGET sgcudart
@@ -46,11 +45,6 @@ add_executable(remote_cuda test/remote_cuda.cu)
 target_include_directories(remote_cuda PUBLIC "/usr/local/cuda/include/")
 target_link_libraries(remote_cuda PUBLIC -lcuda)
 
-add_executable(test_tcp 
-                test/test_tcp.cpp
-                communicate/tcp_server_client.cpp)
-target_include_directories(test_tcp PUBLIC /home/chenyuanhui/project/SplitGPU/include)
-target_link_libraries(test_tcp PUBLIC -lpthread)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

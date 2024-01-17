@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:53
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-12 09:01:22
+ * @LastEditTime: 2024-01-17 10:15:56
  * @FilePath: /SplitGPU/cs/client.h
  * @Description: 
  * 
@@ -17,11 +17,11 @@
 
 namespace SplitGPU {
 
-class Client {
+class SplitClient {
 public:
-    Client(Ipc_type ipc_type);
-    Client(Ipc_type ipc_type,bool remote);
-    ~Client();
+    SplitClient(Ipc_type ipc_type);
+    SplitClient(Ipc_type ipc_type,bool remote);
+    ~SplitClient();
     void connect();
     void close();
     RET request(Request_type type,void* dptr,size_t size);

@@ -63,15 +63,27 @@ int main() {
     // printf("init ret:%d\n",ret);
     // CUdeviceptr cudptr;
     // cuMemAlloc(&cudptr,1024);
-    void* dptr;
+    void* dptr, *dptr2;
+    char* ptr,*cptr;
     size_t size = 1024;
     auto res = cudaMalloc(&dptr,size);
-    printf("%d\n",res);
-    // getchar();
-    // for(int i=0;i<1;i++) {
-    //     test_parallel_add(dptr,1, size);
-    //     usleep(1000);
-    // }
-    
+    res = cudaMalloc(&dptr2,size);
+    ptr = (char*)malloc(size);
+    cptr = (char*)malloc(size);
+    for(int i=0;i<size;i++) {
+        ptr[i] = i%10;
+    }
+    printf("res %d\n",res);
+    res = cudaMemcpy(dptr, ptr, size, cudaMemcpyHostToDevice);
+    printf("res %d\n",res);
+    res = cudaMemcpy(cptr, dptr, size, cudaMemcpyDeviceToHost);
+    printf("res %d\n",res);
+    for(int i=0;i<size;i++) {
+        if(cptr[i] != i%10) {
+            printf("fail,i %d, cptr:%d\n",i,cptr[i]);
+            exit(0);
+        }
+    }
+    printf("pass!\n");
     return 0;
 }

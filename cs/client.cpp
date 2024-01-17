@@ -21,18 +21,18 @@ namespace SplitGPU {
 
 
 
-Client::Client(Ipc_type ipc_type):type(ipc_type) {
+SplitClient::SplitClient(Ipc_type ipc_type):type(ipc_type) {
     gen = std::mt19937(rd());
     dis = std::uniform_int_distribution<>(0, 99); 
 }
 
-Client::Client(Ipc_type ipc_type, bool remote)
+SplitClient::SplitClient(Ipc_type ipc_type, bool remote)
     :type(ipc_type),remoted(remote) {
     gen = std::mt19937(rd());
     dis = std::uniform_int_distribution<>(0, 99); 
 }
 
-void Client::connect() {
+void SplitClient::connect() {
     if(connected) {
         return;
     }
@@ -47,7 +47,7 @@ void Client::connect() {
     request(REQ_TYPE_INIT,nullptr,remoted);
 }
 
-void Client::close() {
+void SplitClient::close() {
     if(connected) {
         RET ret = request(REQ_TYPE_EXIT,nullptr,0);
         connected = false;
@@ -55,13 +55,13 @@ void Client::close() {
     }
 }
 
-Client::~Client() {
+SplitClient::~SplitClient() {
     if(connected) {
         request(REQ_TYPE_EXIT,nullptr,0);
     }
 }
 
-RET Client::request(Request_type type,void* dptr,size_t size) {
+RET SplitClient::request(Request_type type,void* dptr,size_t size) {
     if(!connected) {
         connect();
     }
@@ -80,7 +80,7 @@ RET Client::request(Request_type type,void* dptr,size_t size) {
     return ret;
 }
 
-std::string Client::get_kernel_mangling_name(const void* host_fun) {
+std::string SplitClient::get_kernel_mangling_name(const void* host_fun) {
     auto it = func_name_table.find(host_fun);
     if(it != func_name_table.end()) {
         return it->second;

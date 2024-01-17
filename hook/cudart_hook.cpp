@@ -9,17 +9,32 @@
 #include <fatbinary_section.h>
 #include <string>
 #include <sys/types.h>
+#include <unordered_map>
 #include <vector>
 
 #include "cudart_subset.h"
 #include "hook.h"
 #include "macro_common.h"
 #include "trace_profile.h"
-
-#include "tcp_server_client.h"
 #include "cuda_param.h"
 
-static SplitGPU::Tcp_client cli("127.0.0.1","8888");
+#include "httplib.h"
+
+#define RT_PARAM_PACK(str,var) {                \
+    char byte_array[sizeof(var)];               \
+    memcpy(byte_array,&var,sizeof(var));        \
+    str=std::string(byte_array,sizeof(var));    \
+}                                               \
+
+#define RT_PARAM_UNPACK(str,offset,var) {   \
+    memcpy(&var,&str[offset],sizeof(var));  \
+    offset+=sizeof(var);                    \
+}                                           \
+
+
+
+static httplib::Client cli("0.0.0.0",8888);
+static std::unordered_map<void*, std::string> func_name_map;
 char* data_start;
 
 struct fatBinaryHeader        
@@ -709,20 +724,26 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaDestroyExternalSemaphore(cudaExterna
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
                                                          size_t sharedMem, cudaStream_t stream) {
-    HOOK_TRACE_PROFILE("cudaLaunchKernel");
-    printf("cudaLaunchKernel! func:%p offset:%ld\n",func,  (char*)func - data_start);
-    unsigned char* header = (unsigned char*)func;
-    for(int i=0;i<32;i++) {
-        if(i%4==0)
-            printf("\n");
-        unsigned char v = header[i];
-        printf("%02x ",v);
+    // HOOK_TRACE_PROFILE("cudaLaunchKernel");
+    // printf("cudaLaunchKernel! func:%p offset:%ld\n",func,  (char*)func - data_start);
+    // unsigned char* header = (unsigned char*)func;
+    // using func_ptr = cudaError_t (*)(const void *, dim3, dim3, void **, size_t, cudaStream_t);
+    // static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaLaunchKernel"));
+    // HOOK_CHECK(func_entry);
+    // printf("%phook %p %p %p:%ld\n",args,args[0],args[1],args[2],*((size_t*)args[2]));
+    // return func_entry(func, gridDim, blockDim, args, sharedMem, stream);
+    if( func_name_map.find(const_cast<void*>(func)) != func_name_map.end() ) {
+        std::string str_gridDim;
+        std::string str_blockDim;
+        std::string str_sharedMem;
+        std::string str_stream;
+        RT_PARAM_PACK(str_gridDim, gridDim)
+        RT_PARAM_PACK(str_blockDim, blockDim)
+        RT_PARAM_PACK(str_sharedMem, sharedMem)
+        RT_PARAM_PACK(str_stream, stream)
+    } else {
+        printf("cudaLaunchKernel not find kernel\n");
     }
-    using func_ptr = cudaError_t (*)(const void *, dim3, dim3, void **, size_t, cudaStream_t);
-    static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaLaunchKernel"));
-    HOOK_CHECK(func_entry);
-    printf("%phook %p %p %p:%ld\n",args,args[0],args[1],args[2],*((size_t*)args[2]));
-    return func_entry(func, gridDim, blockDim, args, sharedMem, stream);
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchCooperativeKernel(const void *func, dim3 gridDim, dim3 blockDim,
@@ -840,33 +861,26 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMallocManaged(void **devPtr, size_t 
     return func_entry(devPtr, size, flags);
 }
 
+
+
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMalloc(void **devPtr, size_t size) {
     HOOK_TRACE_PROFILE("cudaMalloc");
-    SplitGPU::gpu_request req = {
-            .type = CUDA_REQ_TYPE,
-            .func_name = "cudaMalloc",
-    };
+    void* _ptr;
+    std::string str_ptr;
+    std::string str_size;
+    RT_PARAM_PACK(str_size,size);
+    RT_PARAM_PACK(str_ptr,_ptr);
+    httplib::Params param;
+    param.insert({"devPtr",str_ptr});
+    param.insert({"size",str_size});
+
+    auto resp = cli.Post("cudaMalloc",param);
+    cudaError_t result;
     off_t offset = 0;
-    void* ptr;
-    size_t _size;
-    PACK_PARAM(req.fargs,offset,ptr)
-    PACK_PARAM(req.fargs,offset,size)
-    cli.sock_write((char*)&req,sizeof(req));
-    cli.sock_read((char*)&req,sizeof(req));
-    memcpy(&ptr,&req.fargs[0],sizeof(devPtr));
-    *devPtr = ptr;
-    cudaError_t res;
-    memcpy(&res,&req.fargs[offset],sizeof(cudaError_t));
-    if(res != cudaSuccess) {
-        printf("fail res %d\n",res);
-    } else {
-        printf("cudasucc %p %ld\n",*devPtr, size);
-    }
-    return res;
-    // using func_ptr = cudaError_t (*)(void **, size_t);
-    // static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaMalloc"));
-    // HOOK_CHECK(func_entry);
-    // return func_entry(devPtr, size);
+    RT_PARAM_UNPACK(resp->body.c_str(),offset,*devPtr)
+    RT_PARAM_UNPACK(resp->body.c_str(),offset,result)
+    printf("cudaMalloc dptr %p\n",*devPtr);
+    return result;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMallocHost(void **ptr, size_t size) {
@@ -1084,11 +1098,58 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMipmappedArrayGetSparseProperties(
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind) {
-    HOOK_TRACE_PROFILE("cudaMemcpy");
-    using func_ptr = cudaError_t (*)(void *, const void *, size_t, enum cudaMemcpyKind);
-    static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaMemcpy"));
-    HOOK_CHECK(func_entry);
-    return func_entry(dst, src, count, kind);
+    // HOOK_TRACE_PROFILE("cudaMemcpy");
+    std::string str_dst;
+    std::string str_src;
+    std::string str_count;
+    std::string str_kind;
+    cudaError_t result;
+    RT_PARAM_PACK(str_dst,dst)
+    RT_PARAM_PACK(str_src,src)
+    RT_PARAM_PACK(str_count,count)
+    RT_PARAM_PACK(str_kind,kind)
+    httplib::Params param;
+    param.insert({"dst",str_dst});
+    param.insert({"src",str_src});
+    param.insert({"count",str_count});
+    param.insert({"kind",str_kind});
+    switch (kind) {
+    case cudaMemcpyHostToHost: {
+        memcpy(dst,src,count);
+    } break;
+    case cudaMemcpyHostToDevice: {
+        std::string src_data((char*)src,count);
+        param.insert({"data",src_data});
+        auto resp = cli.Post("cudaMemcpy",param);
+        off_t offset = 0;
+        RT_PARAM_UNPACK(resp->body.c_str(),offset,result)
+        if(cudaSuccess != result) {
+            printf("HostToDevice fail\n");
+        }
+    } break;
+    case cudaMemcpyDeviceToHost: {
+        auto resp = cli.Post("cudaMemcpy",param);
+        off_t offset = 0;    
+        memcpy(dst,&resp->body.c_str()[offset],count);
+        offset += count;
+        RT_PARAM_UNPACK(resp->body.c_str(),offset,result)
+        if(cudaSuccess != result) {
+            printf("DeviceToHost fail\n");
+        }    
+    } break;
+    case cudaMemcpyDeviceToDevice: {
+        auto resp = cli.Post("cudaMemcpy",param);
+        off_t offset = 0;
+        RT_PARAM_UNPACK(resp->body.c_str(),offset,result)
+        if(cudaSuccess != result) {
+            printf("DeviceToDevice fail\n");
+        }
+    } break;
+    case cudaMemcpyDefault:
+      break;
+    }
+
+    return result;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaMemcpyPeer(void *dst, int dstDevice, const void *src, int srcDevice,
@@ -2663,7 +2724,6 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaStreamUpdateCaptureDependencies_ptsz
 
 HOOK_C_API HOOK_DECL_EXPORT void **__cudaRegisterFatBinary(void *fatCubin) {
     HOOK_TRACE_PROFILE("__cudaRegisterFatBinary");
-    cli.sock_connect();
     __fatBinC_Wrapper_t* fbw = (__fatBinC_Wrapper_t*)fatCubin;
     fatBinaryHeader* header = (fatBinaryHeader*)fbw->data;
     data_start = (char*)header;
@@ -2753,14 +2813,6 @@ HOOK_C_API HOOK_DECL_EXPORT void __cudaRegisterFunction(void **fatCubinHandle, c
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("__cudaRegisterFunction"));
     HOOK_CHECK(func_entry);
     func_entry(fatCubinHandle, hostFun, deviceFun, deviceName, thread_limit, tid, bid, bDim, gDim, wSize);
-    // void* ptr;
-    // if(cudaSuccess != cudaGetSymbolAddress(&ptr,*fatCubinHandle)) {
-    //     printf("cudaGetSymbolAddress fail\n");
-    //     if(cudaErrorInvalidSymbol == cudaGetSymbolAddress(&ptr,*fatCubinHandle))
-    //         printf("not symb\n");
-    // }
-    // else
-    //     printf("cudaGetSymbolAddress succ\n");
     unsigned char* header = (unsigned char*)hostFun;
     header = (unsigned char*)deviceFun;
     std::vector<char> func_vector;
@@ -2772,6 +2824,7 @@ HOOK_C_API HOOK_DECL_EXPORT void __cudaRegisterFunction(void **fatCubinHandle, c
         func_vector.push_back(v);
     }
     std::string func_name(func_vector.begin(),func_vector.end());
+    func_name_map.insert({(void*)hostFun,func_name});
     printf("func name:%s\n",func_name.c_str());
     return ;
 }

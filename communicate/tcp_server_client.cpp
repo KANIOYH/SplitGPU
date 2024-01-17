@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-13 09:48:41
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-16 10:09:04
+ * @LastEditTime: 2024-01-16 21:10:24
  * @FilePath: /SplitGPU/communicate/tcp_server_client.cpp
  * @Description: 
  * 
@@ -83,7 +83,7 @@ void Tcp_server::start_poll() {
         } else {
             epoll_time = 100;
         }
-        int eNum = epoll_wait(eFd, events, EVENTS_SIZE, epoll_time);
+        int eNum = epoll_wait(eFd, events, EVENTS_SIZE, 500);
         // if (eNum == -1) {
         //     cout << "epoll_wait" << endl;
         //     exit(-1);
@@ -139,6 +139,7 @@ void Tcp_server::start_poll() {
                         close(events[i].data.fd);
                     } else {
                         //读到的数据
+                        printf("read\n");
                         read_event.client_fd = events[i].data.fd;
                         _read_events.push_back(read_event);
                         sem_post(&_read_event_sem);
