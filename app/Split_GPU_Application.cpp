@@ -15,6 +15,7 @@ int main() {
     SplitGPU::SHARE_MEMORY,
     SplitGPU::TIME_SLICE_SCHEDULE);
     ctlr->load_clients();
-    ctlr->start();
+    ctlr->intern_start();
+    ctlr->func_start();
     return 0;
 }

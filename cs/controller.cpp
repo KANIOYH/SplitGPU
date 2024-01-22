@@ -2,23 +2,38 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:18
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-22 16:18:54
+ * @LastEditTime: 2024-01-22 16:41:29
  * @FilePath: /SplitGPU/cs/controller.cpp
  * @Description: controller.cpp
  * 
  */
+#include <cstddef>
+#include <future>
+#include <string>
+#include <unistd.h>
+#include <utility>
+
 #include "controller.h"
+#include "httplib.h"
 #include "ipc.h"
 #include "schedule.h"
 #include "sg_log.h"
 #include "split_gpu.h"
 #include "user_context.h"
-#include <cstddef>
-#include <future>
-#include <unistd.h>
-#include <utility>
+
 
 namespace SplitGPU {
+
+// //void Post_kernel(const Request& req, Response& resp) {
+// httplib::Server server;
+// server.Get("/hi", [](const httplib::Request &, httplib::Response &res) {
+// res.set_content("Hello World!", "text/plain");
+// });
+// server.Post("cudaMalloc",Post_cudaMalloc);
+// server.Post("cudaMemcpy",Post_cudaMemcpy);
+// server.Post("cudaDeviceSynchronize",Post_cudaDeviceSynchronize);
+// server.Post("cudaLaunchKernel",Post_kernel);
+// server.listen("0.0.0.0", 8888);
 
 Controller::Controller(Ipc_type server_type, Schedule_type schedule_type):memory(0) {
     switch (server_type) {
@@ -88,7 +103,27 @@ RET Controller::client_offline(Client_id id) {
     }
 }
 
-void Controller::start() {
+void Controller::intern_start() {
+    /*init intern http server*/
+    intern_server.Get("/err_exit", 
+    [&](const httplib::Request &req, httplib::Response &res) {
+        std::string str_pid = req.get_param_value("pid");
+        int pid = std::stoi(str_pid);
+        auto item = ctxs.find(pid);
+        if(item != ctxs.end()) {
+            item->second.login_out(false);
+            client_offline(pid);
+        }
+        res.status=httplib::OK_200;
+    });
+    intern_server_thread = std::thread([&]() {
+        intern_server.listen("0.0.0.0", 9999);
+    });
+    SG_LOG("start intern polling..");
+}
+
+void Controller::func_start() {
+
     schedule->start();
     server->start();
     request* req = nullptr;

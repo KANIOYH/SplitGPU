@@ -18,7 +18,7 @@ def check_alive(pid):
 
 def notify(pid):
     postdata = {'pid':str(pid)}
-    #r = requests.post('127.0.0.1:8888',data = postdata)
+    r = requests.post('127.0.0.1:9999',data = postdata)
     print("notify:",pid)
 
 def register():

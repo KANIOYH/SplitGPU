@@ -8,11 +8,17 @@
  * 
  */
 #pragma once
+
+#include <cstddef>
+#include <map>
+#include <thread>
+
 #include "ipc.h"
 #include "schedule.h"
 #include "user_context.h"
-#include <cstddef>
-#include <map>
+#include "httplib.h"
+
+
 
 namespace SplitGPU {
 
@@ -32,7 +38,8 @@ class Controller {
 public:
     Controller(Ipc_type server_type, Schedule_type schedule_type);
     void load_clients();
-    void start();
+    void func_start();
+    void intern_start();
 private:
     RET register_client(Client_id id, int weight, size_t memory_size);
     RET deregister_client(Client_id id);
@@ -40,6 +47,8 @@ private:
     RET client_offline(Client_id id);
 private:    
     Ipc_server* server;
+    std::thread intern_server_thread;
+    httplib::Server intern_server;
     Schedule* schedule;
     size_t memory;
     std::map<Client_id, Ucontext> ctxs;
