@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-04 13:08:28
+ * @LastEditTime: 2024-01-22 16:58:31
  * @FilePath: /SplitGPU/manager/schedule.cpp
  * @Description: 
  * 
@@ -37,12 +37,6 @@ RET Time_schedule::push_user(Client_id id, int weight) {
 }
 
 RET Time_schedule::remove_user(Client_id id, int weight) {
-    // /* debug */
-    // std::cout << "id" << "\t" << "sum_weight" << "\n";
-    // for(auto item = client_time_list.begin();item != client_time_list.end();) {
-    //     std::cout << item->first << "\t" << item->second << "\n";
-    // }
-    // /* debug */
     for(auto item = client_time_list.begin();item != client_time_list.end();) {
         if(item->first == id) {
             item = client_time_list.erase(item);

@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:18
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-22 16:41:29
+ * @LastEditTime: 2024-01-22 17:36:54
  * @FilePath: /SplitGPU/cs/controller.cpp
  * @Description: controller.cpp
  * 
@@ -24,16 +24,6 @@
 
 namespace SplitGPU {
 
-// //void Post_kernel(const Request& req, Response& resp) {
-// httplib::Server server;
-// server.Get("/hi", [](const httplib::Request &, httplib::Response &res) {
-// res.set_content("Hello World!", "text/plain");
-// });
-// server.Post("cudaMalloc",Post_cudaMalloc);
-// server.Post("cudaMemcpy",Post_cudaMemcpy);
-// server.Post("cudaDeviceSynchronize",Post_cudaDeviceSynchronize);
-// server.Post("cudaLaunchKernel",Post_kernel);
-// server.listen("0.0.0.0", 8888);
 
 Controller::Controller(Ipc_type server_type, Schedule_type schedule_type):memory(0) {
     switch (server_type) {
@@ -105,7 +95,7 @@ RET Controller::client_offline(Client_id id) {
 
 void Controller::intern_start() {
     /*init intern http server*/
-    intern_server.Get("/err_exit", 
+    intern_server.Get("/exit", 
     [&](const httplib::Request &req, httplib::Response &res) {
         std::string str_pid = req.get_param_value("pid");
         int pid = std::stoi(str_pid);
@@ -114,12 +104,14 @@ void Controller::intern_start() {
             item->second.login_out(false);
             client_offline(pid);
         }
+        res.set_content("ok","text");
         res.status=httplib::OK_200;
     });
+    bool ret;
     intern_server_thread = std::thread([&]() {
-        intern_server.listen("0.0.0.0", 9999);
+        ret = intern_server.listen("0.0.0.0", 8999);
     });
-    SG_LOG("start intern polling..");
+    SG_LOG("start intern polling.. %d",ret);
 }
 
 void Controller::func_start() {
@@ -137,7 +129,7 @@ void Controller::func_start() {
         if(req == nullptr) {
             if(sleep_level < 1000)
                 sleep_level*=2;
-            sleep(sleep_level);
+            //sleep(sleep_level);
             continue;
         }
         sleep_level = 100;
