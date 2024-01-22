@@ -1,5 +1,5 @@
 build
-thirdParty
+third_party
 log/user
 output
 .cache

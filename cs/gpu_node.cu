@@ -11,80 +11,91 @@ namespace SplitGPU {
 
 GPU_node::GPU_node() {
     /* both using cuda driver api and cuda runtime api */
-    cuInit(0);
-    cuDeviceGet(&device, 0);
-    cudaSetDevice(0);
-    cuCtxGetCurrent(&context);
+//     CUresult res;
+//     cuInit(0);
+//     cuDeviceGet(&device, 0);
+//     cudaSetDevice(0);
+//     res = cuCtxGetCurrent(&context);
+//     if (res != CUDA_SUCCESS){
+//         printf("cuCtxGetCurrent\n");
+//         exit(EXIT_FAILURE);
+//     }  
+//     res = cuModuleLoad(&module, "/home/chenyuanhui/project/SplitGPU/data.fatbin");
+//     if (res != CUDA_SUCCESS){
+//         printf("cuModuleLoad\n");
+//         exit(EXIT_FAILURE);
+//     }   
 }
 
-// void GPU_node::exec_cuda(std::string cuda_name,gpu_request* req, cudaError_t& result) {
-//     char* args = req->fargs;
-//     printf("%s\n",cuda_name.c_str());
-//     auto item = func_id_map.find(cuda_name);
-//     if(item == func_id_map.end()) {
-//         printf("not find\n");
-//         return;
-//     }
-        
-//     off_t offset = 0;
-//     switch (item->second) {
-//     case SYMBOL_cudaMalloc: {
-//         void** p_devPtr;
-//         size_t* p_size;
-//         UNPACK_PARAM(args,offset,p_devPtr);
-//         UNPACK_PARAM(args,offset,p_size);
-//         result = cudaMalloc(p_devPtr, *p_size);
-//         memcpy(&args[offset], &result, sizeof(result));
-//         printf("cudaMalloc,%p %ld\n",*p_devPtr,*p_size);
-//     } break;
-//     case SYMBOL_cudaFree: {
+CUfunction GPU_node::get_func(std::string func_name) {
+    CUfunction func;
+    printf("func name:%s\n",func_name.c_str());
+    auto res = cuModuleGetFunction(&func, module, "_Z16parallel_add_valPvim");
+    if (res != CUDA_SUCCESS){
+        printf("cuModuleGetFunction\n");
+        exit(EXIT_FAILURE);
+    }  
+    return func;
+}
 
-//     } break;
-//     case SYMBOL_cudaDeviceSynchronize: {
-//         result = cudaDeviceSynchronize();
-//         memcpy(&args[offset], &result, sizeof(result));
-//     };
-//     case SYMBOL_cudaMemcpy: {
-//         char** p_dst;
-//         char** p_src;
-//         size_t* p_count;
-//         cudaMemcpyKind* p_kind;
-//         UNPACK_PARAM(args,offset,p_dst)
-//         UNPACK_PARAM(args,offset,p_src)
-//         UNPACK_PARAM(args,offset,p_count)
-//         UNPACK_PARAM(args,offset,p_kind)
-//         switch(*p_kind) {
-//         case cudaMemcpyHostToHost:
-//         case cudaMemcpyHostToDevice: {
-//             printf("host to device\n");
-//             result = cudaMemcpy(*p_dst, req->extra_data,
-//                                              *p_count, *p_kind);
-//             memcpy(&args[offset], &result, sizeof(result));
-//         } break;
-//         case cudaMemcpyDeviceToHost:
-//         case cudaMemcpyDeviceToDevice:
-//         case cudaMemcpyDefault:
-//           break;
-//         }
-//     } break;
-//     default: {
-//         /*unregister cuda function*/
-//     }
-
-//     }
-// }
-
-cudaError_t exec_cudaMalloc(void** devPtr, size_t size) {
+cudaError_t GPU_node::exec_cudaMalloc(void** devPtr, size_t size) {
     cudaError_t result;
     result = cudaMalloc(devPtr,size);
     return result;
 }
-cudaError_t exec_cudaDeviceSynchronize() {
+cudaError_t GPU_node::exec_cudaDeviceSynchronize() {
     cudaError_t result = cudaSuccess;;
     return result;
 }
-cudaError_t exec_cudaMemcpy(void* dst,void* src, size_t size, cudaMemcpyKind kind) {
+cudaError_t GPU_node::exec_cudaMemcpy(void* dst,void* src, size_t size, cudaMemcpyKind kind) {
     cudaError_t result = cudaSuccess;
+    return result;   
+}
+
+cudaError_t GPU_node::exec_kernel(std::string func_name,dim3 gridDim, dim3 blockDim, void **args,size_t sharedMem, cudaStream_t stream) {
+    CUresult res;
+    cuInit(0);
+    cuDeviceGet(&device, 0);
+    cudaSetDevice(0);
+    res = cuCtxGetCurrent(&context);
+    if (res != CUDA_SUCCESS){
+        printf("cuCtxGetCurrent\n");
+        exit(EXIT_FAILURE);
+    }  
+
+    cudaError_t result = cudaSuccess;
+    CUresult curesult;
+    //CUdeviceptr dptr = (CUdeviceptr)args;
+    printf("------------\n");
+    for(int i=0;i<156;i++) {
+        printf("%02x ",((unsigned char*)args)[i]);
+        if(i!=0 && i%8==0)
+            printf("\n");
+    }
+    printf("\n------------\n");
+    CUfunction f;
+    res = cuModuleGetFunction(&f, module, func_name.data());
+    if (res != CUDA_SUCCESS){
+        printf("cuModuleGetFunction\n");
+        exit(EXIT_FAILURE);
+    }    
+    curesult = cuLaunchKernel(f,gridDim.x, gridDim.y, gridDim.z,
+                         blockDim.x, blockDim.y, blockDim.z,
+                   sharedMem, stream, 0,(void**)&args);
+    cuCtxSynchronize();
+    // int threadsPerBlock = 256;
+    // int blocksPerGrid =(128 + threadsPerBlock - 1) / threadsPerBlock;
+    // int val = 1;
+    // void* arg[] = {&val};
+    // curesult = cuLaunchKernel(kernel,
+    //                blocksPerGrid, 1, 1, threadsPerBlock, 1, 1,
+    //                0, 0, arg, 0);
+    if(curesult!=CUDA_SUCCESS) {
+        printf("launch err:%d\n",curesult);
+    // cuCtxSynchronize();
+    } else {
+        printf("launch ok\n");
+    }
     return result;   
 }
 

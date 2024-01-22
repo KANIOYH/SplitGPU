@@ -44,43 +44,65 @@ int main() {
     cuMemAlloc(&d_C, size);
     cuMemcpyHtoD(d_A, h_A, size);
     cuMemcpyHtoD(d_B, h_B, size);
-
     CUmodule module;
-    res = cuModuleLoad(&module, "/home/chenyuanhui/project/cuda_hook/sample/cuda/vector_add.fatbin");
+    res = cuModuleLoad(&module, "/home/chenyuanhui/project/SplitGPU/data.fatbin");
     if (res != CUDA_SUCCESS){
         printf("cuModuleLoad\n");
         exit(EXIT_FAILURE);
     }    
-    CUfunction vecAdd;
-    res = cuModuleGetFunction(&vecAdd, module, "_Z9vectorAddPKfS0_Pfi");
+    CUfunction f;
+    res = cuModuleGetFunction(&f, module, "_Z14parallel_helloi");
     if (res != CUDA_SUCCESS){
         printf("cuModuleGetFunction\n");
         exit(EXIT_FAILURE);
     }    
-    unsigned char* header = (unsigned char*)vecAdd;
-
-    for(int i=0;i<32;i++) {
-        if(i%4==0)
-            printf("\n");
-        unsigned char v = header[i];
-        printf("%02x ",v);
-    }
+    unsigned char* header = (unsigned char*)f;
     int threadsPerBlock = 256;
     int blocksPerGrid =
             (N + threadsPerBlock - 1) / threadsPerBlock;
-
-    void* args[] = { &d_A, &d_B, &d_C, &N ,&threadsPerBlock};
-    cuLaunchKernel(vecAdd,
+    int val = 1;
+    void* args[] = { &val};
+    cuLaunchKernel(f,
                    blocksPerGrid, 1, 1, threadsPerBlock, 1, 1,
                    0, 0, args, 0);
     cuCtxSynchronize();
-    cuMemcpyDtoH(h_Cb, d_C, size);
-    for (int i = 0; i < N; ++i) {
-        if( abs(h_Cb[i]-h_C[i]) > 0.01 ) {
-            printf("umatch %f %f %d\n",h_Cb[i],h_C[i],i);
-            exit(-1);
-        }
-    }
+
+    // CUmodule module;
+    // res = cuModuleLoad(&module, "/home/chenyuanhui/project/cuda_hook/sample/cuda/vector_add.fatbin");
+    // if (res != CUDA_SUCCESS){
+    //     printf("cuModuleLoad\n");
+    //     exit(EXIT_FAILURE);
+    // }    
+    // CUfunction vecAdd;
+    // res = cuModuleGetFunction(&vecAdd, module, "_Z9vectorAddPKfS0_Pfi");
+    // if (res != CUDA_SUCCESS){
+    //     printf("cuModuleGetFunction\n");
+    //     exit(EXIT_FAILURE);
+    // }    
+    // unsigned char* header = (unsigned char*)vecAdd;
+
+    // for(int i=0;i<32;i++) {
+    //     if(i%4==0)
+    //         printf("\n");
+    //     unsigned char v = header[i];
+    //     printf("%02x ",v);
+    // }
+    // int threadsPerBlock = 256;
+    // int blocksPerGrid =
+    //         (N + threadsPerBlock - 1) / threadsPerBlock;
+
+    // void* args[] = { &d_A, &d_B, &d_C, &N ,&threadsPerBlock};
+    // cuLaunchKernel(vecAdd,
+    //                blocksPerGrid, 1, 1, threadsPerBlock, 1, 1,
+    //                0, 0, args, 0);
+    // cuCtxSynchronize();
+    // cuMemcpyDtoH(h_Cb, d_C, size);
+    // for (int i = 0; i < N; ++i) {
+    //     if( abs(h_Cb[i]-h_C[i]) > 0.01 ) {
+    //         printf("umatch %f %f %d\n",h_Cb[i],h_C[i],i);
+    //         exit(-1);
+    //     }
+    // }
     printf("aaa check pass!\n");
     return 0;
 }

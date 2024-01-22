@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-15 14:23:59
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-17 18:11:11
+ * @LastEditTime: 2024-01-18 10:16:22
  * @FilePath: /SplitGPU/app/gpu_node_app.cpp
  * @Description: http server register for gpu pool
  * 
@@ -31,7 +31,7 @@ void Post_cudaMalloc(const Request& req, Response& resp) {
     cudaError_t result;
     std::string str_devPtr = req.get_param_value("devPtr");
     UNPACK_PARAM("size",size);
-    result = exec_cudaMalloc(&ptr, size);
+    result = g_node.exec_cudaMalloc(&ptr, size);
     char byte_result[sizeof(void*)+sizeof(cudaError_t)]={0};
     memcpy(&byte_result[0],&ptr,sizeof(void*));
     memcpy(&byte_result[sizeof(void*)],&result,sizeof(cudaError_t));
@@ -81,16 +81,54 @@ void Post_cudaMemcpy(const Request& req, Response& resp) {
 
 void Post_cudaDeviceSynchronize(const Request& req, Response& resp) {
     cudaError_t result;
-    result = exec_cudaDeviceSynchronize();
+    result = g_node.exec_cudaDeviceSynchronize();
     char byte_result[sizeof(void*)+sizeof(cudaError_t)]={0};
     memcpy(&byte_result[0],&result,sizeof(void*));
     resp.set_content(byte_result,sizeof(cudaError_t),"cuda");
 }
 
-void Post_kernel
+void Post_kernel(const Request& req, Response& resp) {
+    dim3 gridDim;
+    dim3 blockDim;
+    size_t sharedMem;
+    cudaStream_t stream;
+    //char args[1024];
+    void** args;
+    *args = malloc(1024);
+    UNPACK_PARAM("gridDim",gridDim)
+    UNPACK_PARAM("blockDim",blockDim)
+    UNPACK_PARAM("sharedMem",sharedMem)
+    UNPACK_PARAM("stream",stream)
+    string str_var = req.get_param_value("args");
+    memcpy(args,str_var.c_str(),1024);
+    g_node.exec_kernel(req.get_param_value("kernel"), gridDim, blockDim, args, sharedMem, stream);
+    //free(*args);
+    
+}
 
 int main() {
-    
+
+    CUresult res;
+    cuInit(0);
+    cuDeviceGet(&g_node.device, 0);
+    cudaSetDevice(0);
+    res = cuCtxGetCurrent(&g_node.context);
+    if (res != CUDA_SUCCESS){
+        printf("cuCtxGetCurrent\n");
+        exit(EXIT_FAILURE);
+    }  
+    res = cuModuleLoad(&g_node.module, "/home/chenyuanhui/project/SplitGPU/data.fatbin");
+    if (res != CUDA_SUCCESS){
+        printf("cuModuleLoad\n");
+        exit(EXIT_FAILURE);
+    }  
+
+    CUdeviceptr dptr;
+    res = cuMemAlloc(&dptr, 4);
+    if(res!=CUDA_SUCCESS) {
+        printf("cuMemAlloc err:%d\n",res);
+    }
+
     httplib::Server server;
     server.Get("/hi", [](const httplib::Request &, httplib::Response &res) {
     res.set_content("Hello World!", "text/plain");
@@ -98,7 +136,7 @@ int main() {
     server.Post("cudaMalloc",Post_cudaMalloc);
     server.Post("cudaMemcpy",Post_cudaMemcpy);
     server.Post("cudaDeviceSynchronize",Post_cudaDeviceSynchronize);
-    server.Post("kernel");
+    server.Post("cudaLaunchKernel",Post_kernel);
     server.listen("0.0.0.0", 8888);
     // while(true) {
     //     printf("get req\n");

@@ -724,26 +724,62 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaDestroyExternalSemaphore(cudaExterna
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
                                                          size_t sharedMem, cudaStream_t stream) {
-    // HOOK_TRACE_PROFILE("cudaLaunchKernel");
-    // printf("cudaLaunchKernel! func:%p offset:%ld\n",func,  (char*)func - data_start);
-    // unsigned char* header = (unsigned char*)func;
-    // using func_ptr = cudaError_t (*)(const void *, dim3, dim3, void **, size_t, cudaStream_t);
-    // static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaLaunchKernel"));
-    // HOOK_CHECK(func_entry);
-    // printf("%phook %p %p %p:%ld\n",args,args[0],args[1],args[2],*((size_t*)args[2]));
-    // return func_entry(func, gridDim, blockDim, args, sharedMem, stream);
-    if( func_name_map.find(const_cast<void*>(func)) != func_name_map.end() ) {
+    int pi=0;
+    unsigned char pelf[2];
+    while(true) {
+        unsigned char* arg = (unsigned char*)args[pi]; 
+        if(pi==0) {
+            pelf[0]=arg[0];
+            pelf[1]=arg[1];
+            printf("pELF %02x %02x\n",pelf[0],pelf[1]);
+        } else {
+            printf("%d %d\n",pelf[0] == arg[0],pelf[1] == arg[1]);
+            if(pelf[0] == arg[0] && pelf[1] == arg[1])
+                break;
+        }
+        printf("param byte:");
+        for(int i=0;i<8;i++) {
+            printf("%02x ",arg[i]);
+        }
+        printf("\n");
+        if(pi > 5)
+            break;
+        pi++;
+    }
+    auto it = func_name_map.find(const_cast<void*>(func));
+    if( it != func_name_map.end() ) {
         std::string str_gridDim;
         std::string str_blockDim;
         std::string str_sharedMem;
         std::string str_stream;
+        std::string str_args((char*)args[0],1024);
+        printf("------------\n");
+        for(int i=0;i<156;i++) {
+            printf("%02x ",((unsigned char*)args[0])[i]);
+            if(i!=0 && i%8==0)
+                printf("\n");
+        }
+        printf("\n------------\n");
+        // printf("dptr:%p\n",args[0]);
+        // printf("dptr:%p\n",args[0]);
+        // printf("dptr:%p\n",args[0]);
         RT_PARAM_PACK(str_gridDim, gridDim)
         RT_PARAM_PACK(str_blockDim, blockDim)
         RT_PARAM_PACK(str_sharedMem, sharedMem)
         RT_PARAM_PACK(str_stream, stream)
+        httplib::Params params;
+        params.insert({"kernel",it->second});
+        params.insert({"gridDim",str_gridDim});
+        params.insert({"blockDim",str_blockDim});
+        params.insert({"sharedMem",str_sharedMem});
+        params.insert({"stream",str_stream});
+        params.insert({"args",str_args});
+        auto resp = cli.Post("cudaLaunchKernel",params);
+        return cudaSuccess;
     } else {
         printf("cudaLaunchKernel not find kernel\n");
     }
+    return cudaSuccess;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchCooperativeKernel(const void *func, dim3 gridDim, dim3 blockDim,
@@ -2820,6 +2856,7 @@ HOOK_C_API HOOK_DECL_EXPORT void __cudaRegisterFunction(void **fatCubinHandle, c
         char v = header[i];
         if(v=='(') {
             break;
+            printf("break i:%d v:%c\n",i,v);
         }
         func_vector.push_back(v);
     }
