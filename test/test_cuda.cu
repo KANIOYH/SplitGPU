@@ -34,8 +34,6 @@ __global__ void parallel_add_val(void* dptr,int add,size_t n) {
 void test_parallel_add(void* dptr,int add,size_t n) {
     dim3 block(32);
     dim3 grid((n + block.x -1)/block.x);
-    //dim3 grid((n)/block.x);
-    cudaDeviceSynchronize();
     parallel_add_val<<<grid,block>>>(dptr,add,n);
     cudaDeviceSynchronize();
     //printf("Yes add-kernel finsh!\n");
@@ -54,18 +52,14 @@ void test_parallel_add(void* dptr,int add,size_t n) {
 
 int main() {
 
-    auto ret = cuInit(0);
-    printf("init ret:%d\n",ret);
-    CUdeviceptr cudptr;
-    cuMemAlloc(&cudptr,1024);
     void* dptr;
     size_t size = 1<<20;
     cudaMalloc(&dptr,size);
-    getchar();
-    for(int i=0;i<10;i++) {
-        test_parallel_add(dptr,1, size);
-        usleep(1000);
-    }
+    //getchar();
+    //for(int i=0;i<10;i++) {
+    test_parallel_add(dptr,1, size);
+    usleep(1000);
+    //}
     
     return 0;
 }

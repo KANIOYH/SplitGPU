@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:25
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-10 13:31:22
+ * @LastEditTime: 2024-01-22 14:53:18
  * @FilePath: /SplitGPU/cs/client.cpp
  * @Description: 
  * 
@@ -13,6 +13,12 @@
 #include "split_gpu.h"
 #include <cstdio>
 #include <memory>
+#include <string>
+#include <unistd.h>
+
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <cstring>
 #include <unistd.h>
 
 
@@ -42,6 +48,40 @@ void Client::connect() {
         ipc_client = std::make_shared<Shm_client>(0);
     } break;
     }
+    printf("watch in\n");
+    /*be watched*/
+    {
+        int sockfd = socket(AF_INET,SOCK_STREAM,0);
+        struct sockaddr_in cli;//创建结构体
+        bzero(&cli,sizeof(cli));
+        cli.sin_family = AF_INET;
+        cli.sin_addr.s_addr = inet_addr("127.0.0.1");
+        cli.sin_port = htons(8889);
+        ::connect(sockfd,(sockaddr*)&cli,sizeof(cli));
+        int pid = getpid();
+        printf("pid:%d\n",pid);
+        std::string str_pid = std::to_string(pid);
+        printf("pid:%s\n",str_pid.data());
+        ssize_t size = write(sockfd,str_pid.data(),str_pid.size());
+        if(size == -1 ){
+        }
+        char buf[16];
+        char need[]="A";
+        ssize_t read_size = read(sockfd,buf,sizeof(buf));
+        if(need[0]!=buf[0]) {
+            printf("err resp %s\n",buf);
+            exit(-1);
+        }
+        if(size > 0 ){
+        }
+        else if(size == 0){
+        }
+        else if(size == -1){
+        ::close(sockfd);
+        }
+        ::close(sockfd);
+    }
+    printf("watch out\n");
     ipc_client->connect();
     connected = true;
     request(REQ_TYPE_INIT,nullptr,remoted);

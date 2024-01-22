@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:18
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-06 22:42:15
+ * @LastEditTime: 2024-01-22 16:18:54
  * @FilePath: /SplitGPU/cs/controller.cpp
  * @Description: controller.cpp
  * 
@@ -100,8 +100,9 @@ void Controller::start() {
     while(true) {
         req = server->poll_requests();
         if(req == nullptr) {
-            if(sleep_level < 10000)
+            if(sleep_level < 1000)
                 sleep_level*=2;
+            sleep(sleep_level);
             continue;
         }
         sleep_level = 100;
@@ -188,8 +189,7 @@ void Controller::start() {
             }
             
         } break;
-
-
+        
         }
     }
     
