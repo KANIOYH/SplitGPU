@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-22 16:58:31
+ * @LastEditTime: 2024-01-22 19:13:20
  * @FilePath: /SplitGPU/manager/schedule.cpp
  * @Description: 
  * 
@@ -69,7 +69,7 @@ RET Time_schedule::check(Client_id id, int weight) {
             return RET_FAIL;
         }
     } else {
-        SG_LOG("not find");
+        SG_LOG("check not find,client id:%d",id);
         return RET_FAIL;
     }
 }

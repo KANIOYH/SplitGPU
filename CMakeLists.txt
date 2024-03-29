@@ -16,17 +16,17 @@ add_executable(Split_GPU_Application
 target_include_directories(Split_GPU_Application PUBLIC "./include/" "/usr/local/cuda/include/")
 target_link_libraries(Split_GPU_Application PUBLIC -pthread -lssl -lcrypto)
 
-add_library(sgcudart SHARED 
+add_library(cudart SHARED 
             hook/cuda_hook.cpp
             cs/client.cpp
             communicate/ipc.cpp
             communicate/shmem.c)
-target_include_directories(sgcudart PUBLIC "./include/" "/usr/local/cuda/include/")
-add_custom_command(  
-  TARGET sgcudart
-  COMMAND rm libcuda*.so
-  COMMAND ln -s  libsgcudart.so libcudart.so
-)
+target_include_directories(cudart PUBLIC "./include/" "/usr/local/cuda/include/")
+# add_custom_command(  
+#   TARGET sgcudart
+#   COMMAND rm libcuda*.so
+#   COMMAND ln -s  libsgcudart.so libcudart.so
+# )
 
 add_executable(test_cuda test/test_cuda.cu)
 target_include_directories(test_cuda PUBLIC "/usr/local/cuda/include/")

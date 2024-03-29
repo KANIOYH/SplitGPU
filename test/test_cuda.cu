@@ -16,19 +16,11 @@
 
 
 __global__ void parallel_add_val(void* dptr,int add,size_t n) {
-
     char* val = (char*)dptr;
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if(i==1) {
-        // if(val[i]!=0) {
-        //     printf("kernel not zero\n");
-        // }
-        //printf("Yes add-kernel start!\n");
-    }
     if(i<n) {
         val[i] += add;
     }
-        
 }
 
 void test_parallel_add(void* dptr,int add,size_t n) {
@@ -36,7 +28,6 @@ void test_parallel_add(void* dptr,int add,size_t n) {
     dim3 grid((n + block.x -1)/block.x);
     parallel_add_val<<<grid,block>>>(dptr,add,n);
     cudaDeviceSynchronize();
-    //printf("Yes add-kernel finsh!\n");
     void* host_ptr = malloc(n);
     cudaMemcpy(host_ptr, dptr, n, cudaMemcpyDeviceToHost);
     //check
@@ -51,15 +42,9 @@ void test_parallel_add(void* dptr,int add,size_t n) {
 }
 
 int main() {
-
     void* dptr;
     size_t size = 1<<20;
     cudaMalloc(&dptr,size);
-    //getchar();
-    //for(int i=0;i<10;i++) {
     test_parallel_add(dptr,1, size);
-    usleep(1000);
-    //}
-    
     return 0;
 }

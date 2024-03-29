@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:25
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-22 14:53:18
+ * @LastEditTime: 2024-01-23 10:17:07
  * @FilePath: /SplitGPU/cs/client.cpp
  * @Description: 
  * 
@@ -32,22 +32,17 @@ Client::Client(Ipc_type ipc_type):type(ipc_type) {
     dis = std::uniform_int_distribution<>(0, 99); 
 }
 
-Client::Client(Ipc_type ipc_type, bool remote)
-    :type(ipc_type),remoted(remote) {
-    gen = std::mt19937(rd());
-    dis = std::uniform_int_distribution<>(0, 99); 
-}
+// Client::Client(Ipc_type ipc_type, bool remote)
+//     :type(ipc_type),remoted(remote) {
+//     gen = std::mt19937(rd());
+//     dis = std::uniform_int_distribution<>(0, 99); 
+// }
 
 void Client::connect() {
     if(connected) {
         return;
     }
-    switch (type) {
-    case SHARE_MEMORY:
-    case TCP: {
-        ipc_client = std::make_shared<Shm_client>(0);
-    } break;
-    }
+    int key = 0;
     printf("watch in\n");
     /*be watched*/
     {
@@ -66,11 +61,13 @@ void Client::connect() {
         if(size == -1 ){
         }
         char buf[16];
-        char need[]="A";
+        //char need[]="A";
         ssize_t read_size = read(sockfd,buf,sizeof(buf));
-        if(need[0]!=buf[0]) {
-            printf("err resp %s\n",buf);
-            exit(-1);
+        key = std::stoi(buf);
+        if(key == -1) {
+            printf("key to gpu check fail,key:%d\n",key);
+            ::close(sockfd);
+            exit(0);
         }
         if(size > 0 ){
         }
@@ -82,9 +79,15 @@ void Client::connect() {
         ::close(sockfd);
     }
     printf("watch out\n");
+    switch (type) {
+    case SHARE_MEMORY:
+    case TCP: {
+        ipc_client = std::make_shared<Shm_client>(key);
+    } break;
+    }
     ipc_client->connect();
     connected = true;
-    request(REQ_TYPE_INIT,nullptr,remoted);
+    request(REQ_TYPE_INIT,nullptr,0);
 }
 
 void Client::close() {

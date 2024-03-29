@@ -2,7 +2,7 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:04:38
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-22 12:45:06
+ * @LastEditTime: 2024-02-07 11:55:45
  * @FilePath: /SplitGPU/hook/cuda_hook.cpp
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -25,7 +25,6 @@ Client client(SHARE_MEMORY);
 
 static bool init = true;
 
-#define SIGREGISTE
 
 cudaError_t cudaLaunchKernel (const void *func, dim3 gridDim, dim3 blockDim, void **args,
                                                          size_t sharedMem, cudaStream_t stream) {

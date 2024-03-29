@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:18:53
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-04 13:27:14
+ * @LastEditTime: 2024-01-22 18:44:38
  * @FilePath: /SplitGPU/include/schedule.h
  * @Description: 
  * 
@@ -33,6 +33,7 @@ typedef std::pair<Client_id, int> Client_weight;
 class Schedule {
 public:
     Schedule() {}
+    virtual ~Schedule(){};
     virtual Schedule_type get_type() = 0;
     virtual RET push_user(Client_id id, int weight) = 0;
     virtual RET remove_user(Client_id id, int weight) = 0;

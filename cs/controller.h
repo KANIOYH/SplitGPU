@@ -2,8 +2,8 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2024-01-01 12:41:46
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-06 22:16:50
- * @FilePath: /SplitGPU/cs/controller.h
+ * @LastEditTime: 2024-02-06 21:02:08
+ * @FilePath: /SplitGPU/include/controller.h
  * @Description: 
  * 
  */
@@ -11,6 +11,8 @@
 
 #include <cstddef>
 #include <map>
+#include <memory>
+#include <string>
 #include <thread>
 
 #include "ipc.h"
@@ -22,21 +24,12 @@
 
 namespace SplitGPU {
 
-// struct ClientInfo {
-//     Client_id id;
-//     int schedule_weight;
-//     int memory_limit;
-// };
-
-// class ClientInforTable {
-// public:
-//     std::shared_ptr<ClientInfo> query_client();
-//     void update_client()
-// };
+#define CTR_START (-22)
 
 class Controller {
 public:
     Controller(Ipc_type server_type, Schedule_type schedule_type);
+    Controller(Ipc_type server_type, Schedule_type schedule_type,std::string intern_ip,int intern_port);
     void load_clients();
     void func_start();
     void intern_start();
@@ -46,11 +39,19 @@ private:
     RET client_online(Client_id id);
     RET client_offline(Client_id id);
 private:    
-    Ipc_server* server;
-    std::thread intern_server_thread;
-    httplib::Server intern_server;
-    Schedule* schedule;
-    size_t memory;
+    std::unique_ptr<Ipc_server> _ipc_server;
+    std::thread _intern_server_thread;
+    
+    /* intern rpc */
+    httplib::Server _intern_server;
+    std::string _intern_ip;
+    int _intern_port;
+
+    /* watch dog */
+
+    /* schedule handler */
+    std::unique_ptr<Schedule> _schedule;
+    size_t _memory;
     std::map<Client_id, Ucontext> ctxs;
 };
 

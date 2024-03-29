@@ -65,7 +65,8 @@ public:
     virtual RET wait_request(request* req) = 0;
 };
 
-// /*----------tcpip ipc----------*/
+/*----------tcpip ipc----------*/
+// not impl now
 // class Tcp_server : public Ipc_server {
 // public:
 //     Tcp_server();
