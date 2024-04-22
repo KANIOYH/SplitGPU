@@ -2,7 +2,7 @@
  * @Author: Yamphy Chan && yh_chan_kanio@163.com
  * @Date: 2023-09-27 09:39:17
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-01-04 11:19:39
+ * @LastEditTime: 2024-04-08 23:37:08
  * @FilePath: /SplitGPU/communicate/shmem.h
  * @Description: 
  * 
@@ -20,12 +20,12 @@
 
 #define SHM_SIZE 204800
 
-struct excuda_shmem_t {
+struct shmem_t {
     int shmid;
     key_t key;
     char *shmaddr;
 };
-typedef struct excuda_shmem_t sg_shmem;
+typedef struct shmem_t sg_shmem;
 
 
 int sg_init_shmem(sg_shmem* shm);

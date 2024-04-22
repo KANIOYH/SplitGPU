@@ -2,8 +2,8 @@
  * @Author: yh chen yh_chan_kanio@163.com
  * @Date: 2023-12-29 17:01:56
  * @LastEditors: yh chen yh_chan_kanio@163.com
- * @LastEditTime: 2024-02-06 21:02:42
- * @FilePath: /SplitGPU/app/Split_GPU_Application.cpp
+ * @LastEditTime: 2024-04-08 23:39:26
+ * @FilePath: /SplitGPU/app/sp_gpu_d.cpp
  * @Description: GPU cuda-vir start here
  */
 
@@ -11,6 +11,7 @@
 #include "controller.h"
 #include "httplib.h"
 #include "ini.h"
+
 int main() {
     mINI::INIFile file("config.ini");
     mINI::INIStructure ini;

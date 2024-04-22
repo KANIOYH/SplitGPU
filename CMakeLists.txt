@@ -6,15 +6,15 @@ enable_language(CUDA)
 include(CTest)
 enable_testing()
 
-add_executable(Split_GPU_Application
+add_executable(sp_gpu_d
                 communicate/shmem.c
                 communicate/ipc.cpp 
                 manager/schedule.cpp
                 manager/user_context.cpp
                 cs/controller.cpp
-                app/Split_GPU_Application.cpp)
-target_include_directories(Split_GPU_Application PUBLIC "./include/" "/usr/local/cuda/include/")
-target_link_libraries(Split_GPU_Application PUBLIC -pthread -lssl -lcrypto)
+                app/sp_gpu_d.cpp)
+target_include_directories(sp_gpu_d PUBLIC "./include/" "/usr/local/cuda/include/")
+target_link_libraries(sp_gpu_d PUBLIC -pthread -lssl -lcrypto)
 
 add_library(cudart SHARED 
             hook/cuda_hook.cpp
